@@ -8,11 +8,13 @@ const send = async (o) => {
 
 // --------------- Show latest tab history ---------------
 const res = await send({ command: 'get-tab-history' });
+console.log('GOT TAB HISTORY', res)
+
 if (res) Object.values(res).sort((a,b) => Object.values(b.visits).length - Object.values(a.visits).length).forEach(o => {
 
     const visits = Object.values(o.visits).length
     const item = document.createElement('li');
-    item.innerHTML = `<b>${visits}:</b> <a href="${o.url}">${o.title}</a>`
+    item.innerHTML = `<b>${visits}:</b> <a href="${o.hostname}">${o.hostname}</a>`
     list.appendChild(item);
 })
 

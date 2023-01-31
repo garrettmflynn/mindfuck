@@ -69,7 +69,6 @@ events.forEach(evName => {
 })
 
 // Monitor new tabs
-console.warn('RUNNING TAB OPENED')
 sendToBackground({ command: 'tab-opened', payload: document.referrer });
 
 window.addEventListener('beforeunload', (ev) => {
