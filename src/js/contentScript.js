@@ -47,6 +47,8 @@ const events = [
   'touchend',
   'touchmove',
   'touchcancel',
+  'keydown',
+  'keyup',  
 ]
 
 function stringifyEvent(e) {
