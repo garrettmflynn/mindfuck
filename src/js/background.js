@@ -58,7 +58,9 @@ chrome.notifications.onButtonClicked.addListener(async () => {
 
 // -------------- Update visits --------------
 
+const store = {}
 const active = {}
+let fromDatabase
 
 // Get the correct ID to account for refreshes
 const getId = (id, entry = {}) => {
@@ -82,13 +84,18 @@ const updateVisit = async (hostname, sender, request) => {
     const id = getId(sender.tab.id, entry)
 
     if (command === 'tab-opened') {
-      if (!entry) entry = active[hostname] = {hostname, visits: {}}
-      entry.visits[id] = {url: sender.url, id, title: sender.tab.title, opened: Date.now(), closed: null, events: {}, referrer: request.payload}
+      
+      if (!entry) {
+        entry = active[hostname] = {hostname, visits: {}}
+        store[hostname] = {hostname, visits: {}} // separate the references
+      }
+
+      store[hostname].visits[id] = entry.visits[id] = {url: sender.url, id, title: sender.tab.title, opened: Date.now(), closed: null, events: {}, referrer: request.payload}
     } else {
         const visit = entry.visits[id]
         if (command === 'tab-closed') {
           visit.closed = Date.now()
-          delete entry.visits[id] // Stop tracking the visit
+          delete entry.visits[id] // Disable future tracking of the visit
           saveVisit(hostname, visit)
         }
 
@@ -109,8 +116,21 @@ const updateVisit = async (hostname, sender, request) => {
 
 const __dirname = 'mindfuck'
 const saveVisit = (hostname, info) => {
-  const filename = `${__dirname}/${hostname}`
-  appendCSV(info, filename, undefined, {json: true}) // Save in IndexedDB
+  const base = `${__dirname}/${hostname}`
+  const filename = `${base}_info`
+  const copy = {...info}
+  const events = info.events
+  delete copy.events
+  console.warn(`Saving visit (${info.id}) to IndexedDB`, filename)
+  appendCSV(copy, filename) // Save in IndexedDB
+
+  // for (let eventType in info.events) {
+  Object.entries(events).forEach(async ([eventType, evArray]) => {
+    const filename = `${base}_events_${info.id}_${eventType}`
+    for (let ev of evArray) await appendCSV(ev, filename) // Sequential write to the same file
+  })
+  // }
+
   // chrome.storage.sync.set({ [info.hostname]: info.entry }) // Save in Chrome Storage
 }
 
@@ -118,26 +138,63 @@ const saveVisit = (hostname, info) => {
 const getAllEntries = async () => {
 
   // Using IndexedDB
-  const files = await listFiles(__dirname)
-  let result = {}
+  let result = {};
+  
 
-  await Promise.all(files.map(async hostname => {
+  // Fill from Database
 
-    const visitsArray = await readCSVChunkFromDB(`${__dirname}/${hostname}`, undefined, undefined, {
-      transpose: true,
-      json: true
+  if (!fromDatabase) {
+    const files = await listFiles(__dirname)
+
+    const fileInfo = {}
+    files.forEach(str => {
+      const split = str.split('_')
+      const hostname = split[0]
+      const type = split[1]
+      const id = parseInt(split[2])
+      if (!fileInfo[hostname]) fileInfo[hostname] = {}
+      if (!fileInfo[hostname][type]) fileInfo[hostname][type] = []
+      fileInfo[hostname][type].push({name: str, id})
     })
 
-    const visits = {}
-    visitsArray.forEach(visit => visits[visit.id] = visit)
-    result[hostname] = { hostname, visits }
-  }))
+    console.warn('Getting entries from IndexedDB', fromDatabase, files)
 
-  Object.entries(active).forEach(([hostname, entry]) => {
+    fromDatabase = {} // initialize database snapshot
+
+    await Promise.all(Object.keys(fileInfo).map(async hostname => {
+
+      const info = fileInfo[hostname] 
+      const visitsArray = await readCSVChunkFromDB(`${__dirname}/${hostname}_info`, undefined, undefined, { transpose: true, json: true })
+
+      const visits = {}
+      await Promise.all(visitsArray.map(async visit => {
+        visits[visit.id] = visit
+
+        const eventArray = info.events ? info.events.filter(ev => ev.id === visit.id) : []
+
+        // Reconstruct Events from IndexedDB
+        let events = {}
+        await Promise.all(eventArray.map(async (o) => {
+          const eventType = o.name.split('_')[3]
+          const path = `${__dirname}/${o.name}`
+          const eventsArray = await readCSVChunkFromDB(path, undefined, undefined, { transpose: true, json: true })
+          events[eventType] = eventsArray
+        }))
+
+        visit.events = events // Set events in visit
+      }))
+
+      fromDatabase[hostname] = { hostname, visits }
+    }))
+  }
+
+  for (let hostname in fromDatabase) result[hostname] = {...fromDatabase[hostname]} // Ensure visits is not updated on database snapshot
+
+  Object.entries(store).forEach(([hostname, entry]) => {
     const info = result[hostname] = result[hostname] ?? { hostname }
     const visits = info?.visits
-    const activeVisits = entry.visits
-    info.visits = visits ? {...visits, ...activeVisits} : activeVisits // Include active visits
+    const storedVisits = entry.visits
+    info.visits = visits ? {...visits, ...storedVisits} : storedVisits // Include stored visits
   })
 
   // const hosts = await chrome.storage.sync.get(null) // Using Chrome Storage

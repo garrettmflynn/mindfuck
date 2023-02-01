@@ -242,7 +242,7 @@ export const listFiles = async (dir='data', onload=(directory)=>{}) => {
 
 
 
-export const getFileSize = async (path='data',onread=(size)=>{console.log(size);}) => {
+export const getFileSize = async (path='data',onread=()=>{}) => {
     if(!fsInited) await initFS([path.split('/')[0]]);
     else await dirExists(fs,path.split('/')[0]);
 
@@ -257,7 +257,7 @@ export const getFileSize = async (path='data',onread=(size)=>{console.log(size);
 }
 
 
-export const getCSVHeader = async (path='data', onopen=(header, filename)=>{console.log(header,filename);}) => {
+export const getCSVHeader = async (path='data', onopen=(header, filename)=>{}) => {
     
     if(!fsInited) await initFS([path.split('/')[0]]);
     else await dirExists(fs,path.split('/')[0]);
