@@ -11,7 +11,8 @@ const sendToBackground = (o) => {
 window.addEventListener('message', async (event) => {
 
   const message = event.data
-  if (message.source === 'mindfuck-background') return
+  if (!message) return
+  else if (message.source === 'mindfuck-background') return
   else {
     const res = await chrome.runtime.sendMessage(event.data)
     window.postMessage(res)

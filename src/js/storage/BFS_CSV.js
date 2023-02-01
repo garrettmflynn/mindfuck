@@ -28,19 +28,15 @@ function interpolerp(v0,v1,fit, floor=true) {
 export const appendCSV = async (
     newData, //assume uniformly sized data is passed in, so pass separate timestamp intervals separately
     filename,
-    header
+    header,
+    options
 ) => {
 
-    //console.log(newData);
-
-    //console.log('append',filename);
     if(!filename) {
         let keys = Object.keys(CSV_REFERENCE);
         if(keys.length > 0) filename = keys[keys.length - 1];
         else filename = `csv${new Date().toISOString()}`;
     }
-
-    //console.log(filename);
 
     let csv = CSV_REFERENCE[filename];
     if(!csv) {
@@ -66,9 +62,8 @@ export const appendCSV = async (
     
     let maxLen = 1; //max length of new arrays being appended, if any
     for(const key in newData) {
-        if(csv.header.indexOf(key) > -1 && (newData[key])?.length > maxLen) {
-            maxLen = (newData[key])?.length;
-        } 
+        const value = newData[key]
+        if(csv.header.indexOf(key) > -1 && value && Array.isArray(value) && value?.length > maxLen) maxLen = value?.length;
     }
     
 
@@ -94,8 +89,9 @@ export const appendCSV = async (
             
         }
     }
-    else x = newData[csv.header[0]]; //first csv value treated as x for reference for growing the csv, mainly to generate timestamps if being used but not defined
-    
+    else if(newData[csv.header[0]]) x = newData[csv.header[0]]; //first csv value treated as x for reference for growing the csv, mainly to generate timestamps if being used but not defined
+    else x = Date.now();
+
     if(typeof csv.lastX === 'undefined') csv.lastX = Array.isArray(x) ? x[0] : x;
     if(typeof x === 'undefined') {
         if(csv.header[0].includes('time')) {
@@ -196,14 +192,12 @@ export const appendCSV = async (
 
     if(header) csvProcessed += header.join(',') + '\n'; //append new headers when they show up
     toAppend.forEach((arr) => {
-        csvProcessed += arr.join(',') + '\n';    
+        csvProcessed += ((options?.json) ? arr.map(v => JSON.stringify(v)) : arr).join(',') + '\n';    
         if(csv.bufferSize) csv.buffered++;
     });
 
     csv.lastX = toAppend[toAppend.length-1][0]; //reference the last array written as the latest data for if we don't pass timestamps
-
-
-    console.log('Writing', csv, csvProcessed, toAppend, x)
+    
     //okay we are ready to append arrays to the file
     if(csv.bufferSize) {
         csv.buffer += csvProcessed;

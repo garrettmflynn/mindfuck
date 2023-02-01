@@ -5,7 +5,8 @@ let toResolve = {}
 // Pass messages between the injected script and the background script
 window.addEventListener('message', (event) => {
     const message = event.data
-    if (message.source === 'mindfuck-background') {
+    if (!message) return
+    else if (message.source === 'mindfuck-background') {
         toResolve[message.id](message.payload)
         delete toResolve[message.id]
     }

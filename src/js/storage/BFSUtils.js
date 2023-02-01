@@ -339,9 +339,11 @@ export const getCSVHeader = async (path='data', onopen=(header, filename)=>{cons
 
 
 //returns an object with the headers and correctly sized outputs (e.g. single values or arrays pushed in columns)
-export async function readCSVChunkFromDB(path='data', start=0, end='end') {
+export async function readCSVChunkFromDB(path='data', start=0, end='end', options={}) {
     if(!fsInited) await initFS([path.split('/')[0]]);
     else await dirExists(fs,path.split('/')[0]);
+
+    const transpose = options.transpose || false;
 
 
     let head = await getCSVHeader(path);
@@ -351,7 +353,7 @@ export async function readCSVChunkFromDB(path='data', start=0, end='end') {
 
     let resultLengths = [];
     let resultNames = [];
-    let results = {};
+    let results = (transpose) ? [] : {}
 
     head.forEach((v) => {
         if(v) {
@@ -368,24 +370,30 @@ export async function readCSVChunkFromDB(path='data', start=0, end='end') {
         end = size;
     }
 
-    let data = await readFileChunk(path,start,end);
+    let data = (await readFileChunk(path,start,end)).split('\n').slice(1, -1) // exclude header and last pseudoline
 
-    let headeridx = 0;
-    let lastIdx = 0;
+    let preprocess = (value) => {
+        if (options.json) {
+            try { value = JSON.parse(value) } catch {}
+        } 
+        return value
+    }
+    
     data.forEach((r,i) => {
         let row = r.split(',');
-        while(lastIdx < row.length-1) {
-            let l = resultLengths[headeridx]; 
-            if(l === 1) {
-                results[resultNames[headeridx]].push(row[lastIdx]); 
-                lastIdx++;
-            }
-            else {
-                results[resultNames[headeridx]].push(row[lastIdx].slice(lastIdx,l)); 
-                lastIdx+=l;
-            }
-        } 
+        if (transpose) {
+            const entry = {}
+            row.forEach((v, idx) => entry[resultNames[idx]] = preprocess(v))
+            results.push(entry)
+        } else {
+            row.forEach((v,i) => {
+                const header = resultNames[i]
+                if (!results[header]) results[header] = [];
+                results[header].push(preprocess(v))
+            })
+        }
     });
+
 
     return results;
 
