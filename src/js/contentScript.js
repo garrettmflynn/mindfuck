@@ -70,10 +70,10 @@ events.forEach(evName => {
 })
 
 // Monitor new tabs
-sendToBackground({ command: 'tab-opened', payload: document.referrer });
+sendToBackground({ command: 'page-opened', payload: document.referrer });
 
 window.addEventListener('beforeunload', (ev) => {
-  sendToBackground({ command: 'tab-closed', payload: stringifyEvent(ev) });
+  sendToBackground({ command: 'page-closed', payload: stringifyEvent(ev) });
 })
 
 

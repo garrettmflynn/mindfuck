@@ -24,7 +24,7 @@
     "webNavigation",
     "unlimitedStorage"
   ],
-  "host_permissions":["<all_urls>"],
+  "host_permissions":[ "<all_urls>" ],
 
   "minimum_chrome_version": "49.0",
 

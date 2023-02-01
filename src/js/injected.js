@@ -20,5 +20,5 @@ const sendtoBackground = (o) => {
 }
 
 // ---------------Test sending a message ---------------
-const res = await sendtoBackground({ command: 'get-tab-history', payload: source });
+const res = await sendtoBackground({ command: 'get-all-visits', payload: source });
 console.log('Previous Tabs', res)

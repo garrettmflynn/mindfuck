@@ -8,3 +8,6 @@ We will use [ecological momentary assessment](https://www.gov.uk/guidance/ecolog
 1. [background.js](src/js/background.js) runs on every page.
 2. [popup.js](src/js/popup.js) runs on the popup page.
 3. [contentScript.js](src/js/contentScript.js) relays messages to other pages.
+
+## Roadmap
+1. Track page-internal state changes (e.g. changing focus element like starting a video)
