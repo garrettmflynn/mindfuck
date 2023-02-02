@@ -39,7 +39,6 @@
 
   "web_accessible_resources": [{
     "resources": [
-      "js/injected.js", 
       "js/page/events.js"
     ],
     "matches": ["<all_urls>"]
@@ -47,14 +46,5 @@
 
   "externally_connectable": {
     "matches": ["*://localhost/*", "*://brainsatplay.com/*"]
-},
-
-  "content_scripts": [
-    {
-      "matches": ["http://*/**", "https://*/**"],
-      "js": [
-        "js/contentScript.js"
-      ]
-    }
-  ]
+}
 }

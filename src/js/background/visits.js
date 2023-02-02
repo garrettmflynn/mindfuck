@@ -2,6 +2,7 @@ import { appendCSV } from "./storage/BFS_CSV.js";
 import { listFiles, readCSVChunkFromDB } from "./storage/BFSUtils.js";
 import { allVisits, getId } from "./globals.js";
 import { eventEvent, pageClosedEvent, tabSwitchedEvent } from "../commands.js";
+import { injectScript } from "./inject.js";
 
 let fromDatabase
 
@@ -29,12 +30,7 @@ export const createVisit = async (tab, previousInfo = {}) => {
     if (!isChrome) {
 
         // Inject script to get events
-        await new Promise((resolve) => chrome.scripting.executeScript({
-            target : {tabId : tab.id},
-            files : [ 'js/page/events.js' ],
-            })
-            .then(resolve)
-        )
+        await injectScript(tab.id, 'js/page/events.js')
 
         // Inject script to get referrer
         createdBy = await new Promise((resolve) => chrome.scripting.executeScript(
