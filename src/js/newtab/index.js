@@ -53,7 +53,10 @@ function millisToMinutesAndSeconds(millis) {
     const system = !o.hostname.includes('.')
     li.innerHTML = `
     <small class="timestamp">${new Date(o.started).toLocaleString()}</small> 
-    <h4>${o.title}</h4>
+    <div class="header">
+        <h4>${o.title}</h4>
+        <small>${o.url}</small>
+    </div>
     <small><b>Time Active:</b> ${!!o.ended ? `${millisToMinutesAndSeconds(o.ended - o.started)}` : `Active`}</small>
     <br>
     <small><b>Path:</b> ${o.previousVisit} —> ${o.id}</small>`
