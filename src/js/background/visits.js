@@ -154,9 +154,11 @@ export const updateVisit = async (
         }
 
         else if (command === eventEvent) {
-          const ev = JSON.parse(payload)
-          let evType = visit.events[ev.type]
-          if (!evType) evType = visit.events[ev.type] = []
+          let from = payload.from || 'window'
+          const ev = JSON.parse(payload.from ? payload.event : payload)
+          const type = payload.from ? `${from}-${ev.type}` : ev.type
+          let evType = visit.events[type]
+          if (!evType) evType = visit.events[type] = []
           evType.push(ev)
         }
     }

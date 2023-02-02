@@ -38,13 +38,15 @@
   },
 
   "web_accessible_resources": [{
-    "resources": [
-      "js/page/events.js"
+    "resources": [      
+      "js/page/onElement.js",
+      "js/page/properties.js"
+
     ],
     "matches": ["<all_urls>"]
   }],
 
   "externally_connectable": {
     "matches": ["*://localhost/*", "*://brainsatplay.com/*"]
-}
+  }
 }
