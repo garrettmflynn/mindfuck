@@ -10,4 +10,4 @@ We will use [ecological momentary assessment](https://www.gov.uk/guidance/ecolog
 3. [contentScript.js](src/js/contentScript.js) relays messages to other pages.
 
 ## Roadmap
-1. Track page-internal state changes (e.g. changing focus element like starting a video)
+1. Ensure that the extension works reliably on pages that have many auto-reloads (e.g. Youtube)

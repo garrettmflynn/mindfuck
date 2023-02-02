@@ -1,8 +1,11 @@
 
-if (globalThis.mindfuckEventScript) return //console.error('mindfuckEventScript already exists')
 
-else {
+if (!globalThis.mindfuckEventScript) {
     (async () => {
+
+        // const keysExcluded = new Set()
+        // const keysExcludedByEventType = {}
+
         const onElementUtils = await import(chrome.runtime.getURL('./js/page/onElement.js'));
         const properties = await import(chrome.runtime.getURL('./js/page/properties.js'));
 
@@ -31,18 +34,111 @@ else {
             return events
         }
 
-        function stringifyEvent(e) {
+        // Get query selector input
+        function convertAttributesToQuerySelector(element){
+
+            if (!element.tagName) console.error('No tag name', element)
+            var tagName = element.tagName.toLowerCase();
+            var result = tagName;   
+          
+            Array.prototype.slice.call(element.attributes).forEach( function(item) {
+            if(element.outerHTML.includes(item.name))
+              result += '[' + item.name +'="' + item.value + '"]';
+          
+          });
+          
+            return result;
+            //["a[id="y"]", "a[class="vote-up-off"]", "a[title="This answer is useful"]"]
+          
+          }
+          
+          function getMyPath(element){
+            const parentEl = element.parentElement;
+            if(!parentEl || parentEl.tagName == 'HTML') return 'html';
+            return getMyPath(parentEl) + '>' + parentEl.tagName.toLowerCase() ;
+            //"html>body>div>div>div>div>div>div>table>tbody>tr>td>div"
+          
+          }
+          
+          function myUniqueQuerySelector(element){
+          
+            var elementPath = getMyPath(element);
+            var simpleSelector =   convertAttributesToQuerySelector(element);
+          
+            return elementPath + '>' + simpleSelector;
+          
+          }
+
+
+          const toTransfer = [
+            'clientX',
+            'clientY',
+            'deltaX',
+            'deltaY',
+            'deltaZ',
+            'deltaMode',
+            'animationName',
+            'propertyName',
+            'pseudoElement',
+            'elapsedTime',
+
+            // Pointer Events
+            'pressure',
+            'tangentialPressure',
+            'tiltX',
+            'tiltY',
+            'twist',
+            'pointerType',
+            'azimuthAngle',
+            'altitudeAngle',
+
+
+            // Device Orientation
+            'alpha',
+            'beta',
+            'gamma',
+            'absolute',
+
+            // Keys
+            'key',
+            // 'code',
+            'location',
+            'repeat',
+            'isComposing',
+            'ctrlKey',
+            'shiftKey',
+            'altKey',
+            'metaKey',
+        ]
+
+        function stringifyEventForBackground(e) {
 
             try {
+
                 const obj = {};
-                for (let k in e) {
-                    obj[k] = e[k];
-                }
+                obj.timestamp = e.timeStamp
+                obj.target = e.target
+                obj.type = e.type
+
+                toTransfer.forEach(key => {
+                    if (key in e) obj[key] = e[key]
+                })
+
+                // for (let k in e) {
+                //     if (!(k in obj)) {
+                //         if (!keysExcludedByEventType[k]) keysExcludedByEventType[k] = new Set()
+                //         keysExcluded.add(k)
+                //         keysExcludedByEventType[k].add(e.type)
+                //     }
+                // }
+
                 return JSON.stringify(obj, (k, v) => {
-                    if (v instanceof Node) return 'Node';
+                    if (v instanceof Element) return myUniqueQuerySelector(v);
+                    if (v instanceof Node) return v.nodeName;
                     if (v instanceof Window) return 'Window';
                     return v;
                 }, ' ');
+
             } catch (err) {
                 console.warn('Failed to pass event type', e.type, err)
                 return
@@ -58,7 +154,7 @@ else {
         // Monitor window events
         allEvents.window.forEach(evName => {
             window.addEventListener(evName, (ev) => {
-                const payload = stringifyEvent(ev)
+                const payload = stringifyEventForBackground(ev)
                 if (payload) sendToBackground({ command: 'mindfuck-event', payload })
             })
         })
@@ -77,7 +173,7 @@ else {
 
                 elementEvents.forEach(evName => {
                     el.addEventListener(evName, (ev) => {
-                        const event = stringifyEvent(ev)
+                        const event = stringifyEventForBackground(ev)
                         if (event) sendToBackground({ command: 'mindfuck-event', payload: {from: tagName, event} })
                     })
                 })
