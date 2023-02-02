@@ -2,7 +2,7 @@
 export const allVisits = {}
 
 // Get the correct ID to account for refreshes
-export const getId = (id) => {
+export const getId = (id, offset) => {
     let i = 0
     let returned = id
   
@@ -11,6 +11,8 @@ export const getId = (id) => {
       i++
       returned = `${id}+${i}` // Iterate ID
     }
+
+    if (offset) returned = `${id}+${i + offset}` // Return offset id
   
     return returned
   }

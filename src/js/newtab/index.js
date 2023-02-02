@@ -16,14 +16,14 @@ function millisToMinutesAndSeconds(millis) {
     var minutes = Math.floor(millis / 60000);
     var seconds = ((millis % 60000) / 1000).toFixed(0);
     return `${minutes}m ${seconds}s`;
-  }
+}
 
-  const registerVisit = (o) => {
+const registerVisit = (o) => {
     visitMap[o.id] = o
     return o
-  }
+}
 
-  const visualizeVisit = (o) => {
+const visualizeVisit = (o) => {
 
     // // By Origin
     // let visitElements = allVisitElements[o.hostname];
@@ -38,7 +38,7 @@ function millisToMinutesAndSeconds(millis) {
 
     // // Object.values(o.visits).forEach(v => {
     //     const li = document.createElement('li');
-    //     li.innerHTML = `${o.title} (${!!o.ended ? `${millisToMinutesAndSeconds(o.ended - o.started)}` : `Active`})`
+    //     li.innerHTML = `${o.title} (${!!o.ended ? `${millisToMinutesAndSeconds(o.ended - o.timestamp)}` : `Active`})`
     //     const evList = document.createElement('ul');
     //     li.insertAdjacentElement('beforeend', evList)
     //     Object.entries(o.events).forEach(([evType, events]) => {
@@ -52,14 +52,18 @@ function millisToMinutesAndSeconds(millis) {
     const li = document.createElement('li');
     const system = !o.hostname.includes('.')
     li.innerHTML = `
-    <small class="timestamp">${new Date(o.started).toLocaleString()}</small> 
+    <small class="timestamp">${new Date(o.timestamp).toLocaleString()}</small> 
+    <small class="id">${o.id}</small>
     <div class="header">
         <h4>${o.title}</h4>
         <small>${o.url}</small>
     </div>
-    <small><b>Time Active:</b> ${!!o.ended ? `${millisToMinutesAndSeconds(o.ended - o.started)}` : `Active`}</small>
+    <small><b>Time Active:</b> ${!!o.ended ? `${millisToMinutesAndSeconds(o.ended - o.timestamp)}` : `Active`}</small>
     <br>
-    <small><b>Path:</b> ${o.previousVisit} —> ${o.id}</small>`
+    <br>
+    ${o.next ? `<small><b>Next:</b> ${o.next} (${o.from})</small><br>` : ''}
+    <small><b>Previous:</b> ${o.previous} (${o.to})</small><br>
+    `
     if (system) li.classList.add('system')
 
     // Show events
@@ -76,23 +80,24 @@ function millisToMinutesAndSeconds(millis) {
     }
 
     originVisitsList.insertAdjacentElement('beforeend', li)
-    
-  }
 
-    const onVisit = (o) => {
-        registerVisit(o)
-        visualizeVisit(o)
-    }
+}
 
-    // Register all visits
-    Object.values(res).forEach(o => Object.values(o.visits).forEach(v => registerVisit(v)))
+const onVisit = (o) => {
+    registerVisit(o)
+    visualizeVisit(o)
+}
 
-    // Visualize each visit in reverse chronological order
-    const allVisits = Object.values(visitMap)
-    allVisits.sort((a, b) => a.started - b.started).reverse().forEach(visualizeVisit)
+// Register all visits
+Object.values(res).forEach(o => Object.values(o.visits).forEach(v => registerVisit(v)))
 
-    console.log("Visit Chronology", allVisits.length, allVisits)
+// Visualize each visit in reverse chronological order
+const chronology = Object.values(visitMap).sort((a, b) => a.timestamp - b.timestamp).reverse()
+chronology.forEach(visualizeVisit)
 
+console.log("Visit Chronology", chronology.length, chronology)
+
+// NOTE: This currently doesn't do anything...
 window.addEventListener('message', (event) => {
     const message = event.data
     if (!message) return
@@ -104,16 +109,16 @@ window.addEventListener('message', (event) => {
 
 // --------------- Create alarms ---------------
 function setAlarm() {
-    chrome.action.setBadgeText({text: 'ON'});
+    chrome.action.setBadgeText({ text: 'ON' });
     chrome.alarms.create();
     window.close();
-  }
-  
+}
+
 //   function clearAlarm() {
 //     chrome.action.setBadgeText({text: ''});
 //     chrome.alarms.clearAll();
 //     window.close();
 //   }
-  
-  document.getElementById('triggerAlarm').addEventListener('click', () => send({command: 'create-alarm'}))
+
+document.getElementById('triggerAlarm').addEventListener('click', () => send({ command: 'create-alarm' }))
 //   document.getElementById('clearAlarms').addEventListener('click', () => send({command: 'clear-alarms'}))

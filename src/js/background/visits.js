@@ -1,7 +1,7 @@
 import { appendCSV } from "./storage/BFS_CSV.js";
 import { listFiles, readCSVChunkFromDB } from "./storage/BFSUtils.js";
 import { allVisits, getId } from "./globals.js";
-import { eventEvent, pageClosedEvent, tabSwitchedEvent } from "../commands.js";
+import { eventEvent, pageClosedEvent, tabRefreshedEvent, tabSwitchedEvent, tabUpdateEvent } from "../commands.js";
 import { injectScript } from "./inject.js";
 
 let fromDatabase
@@ -11,7 +11,7 @@ export const activeVisits = {}
 
 // -------------- Update visits --------------
 
-export const createVisit = async (tab, previousInfo = {}) => {
+export const createVisit = async (tab, previousVisit = {}) => {
 
   const id = getId(tab.id)
 
@@ -58,7 +58,7 @@ export const createVisit = async (tab, previousInfo = {}) => {
       id,
       tab: tab.id,
       title: tab.title,
-      started: previousInfo.ended || Date.now(),
+      timestamp: previousVisit.ended || Date.now(),
       createdBy, // document.referrer OR null when an origin point
 
       // During Visit
@@ -66,12 +66,14 @@ export const createVisit = async (tab, previousInfo = {}) => {
       actions: {}, // e.g. 
 
       // At End
-      stateChange: '', 
       ended: null,
 
+
       // Track Path
-      previousVisit: previousInfo.id,
-      nextVisit: null,
+      previous: previousVisit.id,
+      next: null,
+      to: previousVisit.from,
+      from: null,
     }
 
     allVisits[id] = activeVisits[id] = visit
@@ -94,19 +96,21 @@ export const getTab = async (id) => {
     }
 }
 
-const getVisit = async (tabId, previousInfo) => {
+const getVisit = async (tabId, previousVisit) => {
 
     const id = getId(tabId)
 
     let visit = activeVisits[id] 
     if (!visit) {
         const tab = await getTab(tabId)
-        if (tab) visit = await createVisit(tab, previousInfo)
+        if (tab) visit = await createVisit(tab, previousVisit)
         else return
     }
 
     return visit
 }
+
+let latestVisit;
 
 export const updateVisit = async ( 
   tabId, 
@@ -114,26 +118,38 @@ export const updateVisit = async (
   payload, 
 ) => {
 
-    const visit = await getVisit(tabId)
+    const visit = await getVisit(tabId, latestVisit)
 
     if (visit) {
 
-        const onVisitEnd = async (info) => {
-            visit.previousVisit = info.previousVisit
-            visit.nextVisit = info.nextVisit.id
-            visit.started = info.started 
+        const onVisitEnd = async (info, updatedTab) => {
+            visit.previous = info.previousVisit.id
+            visit.timestamp = info.timestamp 
             visit.ended = info.ended 
 
             // Check if tab was closed
-            const exists = await chrome.tabs.get(visit.tab).catch(() => null) 
-            visit.stateChange = (!exists) ? pageClosedEvent : tabSwitchedEvent
+
+            let event;
+            if (updatedTab) event = (visit.url === updatedTab.url) ? tabRefreshedEvent : tabUpdateEvent
+            else {
+                const exists = await chrome.tabs.get(visit.tab).catch(() => null) 
+                event= (!exists) ? pageClosedEvent : tabSwitchedEvent
+            }
+
+            visit.next = info.nextVisit.id
+            visit.from = event
 
             saveVisit(visit)
         }
 
         if (command === tabSwitchedEvent) {
-            if (payload.previousVisit) await onVisitEnd(payload)
-            const newVisit = await getVisit(payload.nextVisit.tab, payload)
+
+            const info = payload.info
+            // Close out the previous visit
+            await onVisitEnd(info, payload.update)
+
+            // Register the new visit
+            latestVisit = await getVisit(info.nextVisit.tab, visit)
             // console.warn('Send latest visit to the dashboard', newVisit)
         }
 
