@@ -1,0 +1,6 @@
+export const tabSwitchedEvent = 'tab-switched'
+// export const pageOpenedEvent = 'page-opened'
+export const pageClosedEvent = 'page-closed'
+export const eventEvent = 'mindfuck-event'
+export const getAllVisitsCommand = 'get-all-visits'
+export const createAlarmCommand = 'create-alarm'
