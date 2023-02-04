@@ -39,9 +39,7 @@
 
   "web_accessible_resources": [{
     "resources": [      
-      "js/page/onElement.js",
-      "js/page/properties.js"
-
+      "js/page/webtrack/index.esm.js"
     ],
     "matches": ["<all_urls>"]
   }],
